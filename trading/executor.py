@@ -41,6 +41,15 @@ def get_account_info() -> Optional[dict]:
         return None
 
 
+def _get_position_qty(client, ticker: str) -> float:
+    """Return the number of shares held for *ticker*, or 0 if no position."""
+    try:
+        pos = client.get_open_position(ticker)
+        return float(pos.qty)
+    except Exception:
+        return 0.0
+
+
 def place_trades(
     predictions: list[dict],
     confidence_threshold: float = MIN_CONFIDENCE,
@@ -49,8 +58,8 @@ def place_trades(
     """Submit paper trades based on aggregated prediction signals.
 
     For each ticker with a 5-day horizon:
-      - avg predicted_return > 0  → BUY market order
-      - avg predicted_return < 0  → SELL market order
+      - avg predicted_return > 0  → BUY market order (fractional notional)
+      - avg predicted_return < 0  → SELL existing position only (full qty)
     Only trades with avg confidence >= *confidence_threshold* are executed.
 
     Returns a list of order confirmation dicts.
@@ -78,37 +87,63 @@ def place_trades(
             logger.info("[SKIP] %s conf=%.2f below threshold %.2f", ticker, avg_conf, confidence_threshold)
             continue
 
-        side = OrderSide.BUY if avg_return > 0 else OrderSide.SELL
-        notional = round(allocation, 2)
-
-        try:
-            req = MarketOrderRequest(
-                symbol=ticker,
-                notional=notional,
-                side=side,
-                time_in_force=TimeInForce.DAY,
-            )
-            order = client.submit_order(req)
-            logger.info(
-                "[TRADE] %s %s $%.2f → order %s (%s)",
-                side.name, ticker, notional, order.id, order.status,
-            )
-            orders.append({
-                "ticker": ticker,
-                "side": side.name,
-                "notional": notional,
-                "order_id": str(order.id),
-                "status": order.status,
-                "confidence": round(avg_conf, 2),
-                "predicted_return": round(avg_return, 4),
-            })
-        except Exception as e:
-            logger.error("[TRADE FAIL] %s %s: %s", side.name, ticker, e)
-            orders.append({
-                "ticker": ticker,
-                "side": side.name,
-                "notional": notional,
-                "error": str(e),
-            })
+        if avg_return > 0:
+            # BUY: fractional market order
+            try:
+                req = MarketOrderRequest(
+                    symbol=ticker,
+                    notional=round(allocation, 2),
+                    side=OrderSide.BUY,
+                    time_in_force=TimeInForce.DAY,
+                )
+                order = client.submit_order(req)
+                logger.info("[TRADE] BUY %s $%.2f → order %s (%s)", ticker, allocation, order.id, order.status)
+                orders.append({
+                    "ticker": ticker,
+                    "side": "BUY",
+                    "notional": allocation,
+                    "order_id": str(order.id),
+                    "status": order.status,
+                    "confidence": round(avg_conf, 2),
+                    "predicted_return": round(avg_return, 4),
+                })
+            except Exception as e:
+                logger.error("[TRADE FAIL] BUY %s: %s", ticker, e)
+                orders.append({"ticker": ticker, "side": "BUY", "notional": allocation, "error": str(e)})
+        else:
+            # SELL: only if we hold a position, sell exact shares (no short selling)
+            qty = _get_position_qty(client, ticker)
+            if qty <= 0:
+                logger.info("[SKIP] SELL %s — no shares held", ticker)
+                orders.append({
+                    "ticker": ticker,
+                    "side": "SELL",
+                    "notional": 0,
+                    "status": "skipped (no position)",
+                    "confidence": round(avg_conf, 2),
+                    "predicted_return": round(avg_return, 4),
+                })
+                continue
+            try:
+                req = MarketOrderRequest(
+                    symbol=ticker,
+                    qty=round(qty),
+                    side=OrderSide.SELL,
+                    time_in_force=TimeInForce.DAY,
+                )
+                order = client.submit_order(req)
+                logger.info("[TRADE] SELL %s %d shares → order %s (%s)", ticker, round(qty), order.id, order.status)
+                orders.append({
+                    "ticker": ticker,
+                    "side": "SELL",
+                    "qty": round(qty),
+                    "order_id": str(order.id),
+                    "status": order.status,
+                    "confidence": round(avg_conf, 2),
+                    "predicted_return": round(avg_return, 4),
+                })
+            except Exception as e:
+                logger.error("[TRADE FAIL] SELL %s: %s", ticker, e)
+                orders.append({"ticker": ticker, "side": "SELL", "qty": round(qty), "error": str(e)})
 
     return orders
