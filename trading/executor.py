@@ -111,7 +111,7 @@ def place_trades(
                 logger.error("[TRADE FAIL] BUY %s: %s", ticker, e)
                 orders.append({"ticker": ticker, "side": "BUY", "notional": allocation, "error": str(e)})
         else:
-            # SELL: only if we hold a position, sell exact shares (no short selling)
+            # SELL: only if we hold a position, sell 1/10th of shares (no short selling)
             qty = _get_position_qty(client, ticker)
             if qty <= 0:
                 logger.info("[SKIP] SELL %s — no shares held", ticker)
@@ -124,19 +124,20 @@ def place_trades(
                     "predicted_return": round(avg_return, 4),
                 })
                 continue
+            sell_qty = max(1, round(qty / 10))  # sell 1/10th, minimum 1 share
             try:
                 req = MarketOrderRequest(
                     symbol=ticker,
-                    qty=round(qty),
+                    qty=sell_qty,
                     side=OrderSide.SELL,
                     time_in_force=TimeInForce.DAY,
                 )
                 order = client.submit_order(req)
-                logger.info("[TRADE] SELL %s %d shares → order %s (%s)", ticker, round(qty), order.id, order.status)
+                logger.info("[TRADE] SELL %s %d of %d shares → order %s (%s)", ticker, sell_qty, round(qty), order.id, order.status)
                 orders.append({
                     "ticker": ticker,
                     "side": "SELL",
-                    "qty": round(qty),
+                    "qty": sell_qty,
                     "order_id": str(order.id),
                     "status": order.status,
                     "confidence": round(avg_conf, 2),
