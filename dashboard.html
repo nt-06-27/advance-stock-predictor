@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stock Forecast Dashboard</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a23;
+      color: #fff;
+      min-height: 100vh;
+      padding: 24px
+    }
+
+    .dashboard {
+      max-width: 1200px;
+      margin: 0 auto
+    }
+
+    /* header */
+    .header {
+      margin-bottom: 32px
+    }
+
+    .header h1 {
+      font-size: 24px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 4px
+    }
+
+    .header span {
+      font-size: 13px;
+      color: #8686AC
+    }
+
+    /* stat bar */
+    .stat-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px
+    }
+
+    .stat-card {
+      background: linear-gradient(135deg, #0F0E47 0%, #272757 100%);
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid rgba(134, 134, 172, 0.15)
+    }
+
+    .stat-card .label {
+      font-size: 12px;
+      color: #8686AC;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 8px
+    }
+
+    .stat-card .value {
+      font-size: 28px;
+      font-weight: 700
+    }
+
+    .stat-card .value.up {
+      color: #4ade80
+    }
+
+    .stat-card .value.down {
+      color: #f87171
+    }
+
+    /* ticker grid */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px
+    }
+
+    .card {
+      background: linear-gradient(135deg, #0F0E47 0%, #272757 100%);
+      border-radius: 12px;
+      padding: 24px;
+      border: 1px solid rgba(134, 134, 172, 0.15);
+      transition: transform .15s, box-shadow .15s
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, .3)
+    }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px
+    }
+
+    .ticker {
+      font-size: 20px;
+      font-weight: 700
+    }
+
+    .badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: .5px
+    }
+
+    .badge.up {
+      background: rgba(74, 222, 128, 0.15);
+      color: #4ade80
+    }
+
+    .badge.down {
+      background: rgba(248, 113, 113, 0.15);
+      color: #f87171
+    }
+
+    .change {
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 4px
+    }
+
+    .change.up {
+      color: #4ade80
+    }
+
+    .change.down {
+      color: #f87171
+    }
+
+    .meta {
+      display: flex;
+      gap: 24px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(134, 134, 172, 0.15)
+    }
+
+    .meta-item {
+      text-align: center
+    }
+
+    .meta-item .val {
+      font-size: 14px;
+      font-weight: 600
+    }
+
+    .meta-item .lbl {
+      font-size: 11px;
+      color: #8686AC;
+      margin-top: 2px
+    }
+
+    /* insights */
+    .insights {
+      background: linear-gradient(135deg, #0F0E47 0%, #272757 100%);
+      border-radius: 12px;
+      padding: 24px;
+      border: 1px solid rgba(134, 134, 172, 0.15)
+    }
+
+    .insights h3 {
+      font-size: 14px;
+      color: #8686AC;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 16px
+    }
+
+    .insight-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(134, 134, 172, 0.1)
+    }
+
+    .insight-row:last-child {
+      border-bottom: none
+    }
+
+    .insight-row .name {
+      font-size: 14px
+    }
+
+    .insight-row .signal {
+      font-size: 13px;
+      font-weight: 600
+    }
+
+    .insight-row .signal.up {
+      color: #4ade80
+    }
+
+    .insight-row .signal.down {
+      color: #f87171
+    }
+
+    .insight-row .acc {
+      font-size: 13px;
+      color: #8686AC
+    }
+  </style>
+</head>
+
+<body>
+  <div class="dashboard">
+    <div class="header">
+      <h1>Stock Forecast</h1>
+      <span>5-day return prediction &middot; Updated just now</span>
+    </div>
+
+    <div class="stat-bar">
+      <div class="stat-card">
+        <div class="label">Up Signals</div>
+        <div class="value up">3</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Down Signals</div>
+        <div class="value down">2</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Avg Confidence</div>
+        <div class="value" style="color:#8686AC">0.65</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Best Pick</div>
+        <div class="value" style="font-size:20px;color:#4ade80">AAPL</div>
+      </div>
+    </div>
+
+    <div class="grid" id="tickerGrid">
+      <div class="card">
+        <div class="card-top"><span class="ticker">AAPL</span><span class="badge up">▲ UP</span></div>
+        <div class="change up">+1.82%</div>
+        <div class="meta">
+          <div class="meta-item">
+            <div class="val">0.71</div>
+            <div class="lbl">Confidence</div>
+          </div>
+          <div class="meta-item">
+            <div class="val">0.58</div>
+            <div class="lbl">Dir Acc</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-top"><span class="ticker">MSFT</span><span class="badge down">▼ DOWN</span></div>
+        <div class="change down">-0.34%</div>
+        <div class="meta">
+          <div class="meta-item">
+            <div class="val">0.65</div>
+            <div class="lbl">Confidence</div>
+          </div>
+          <div class="meta-item">
+            <div class="val">0.52</div>
+            <div class="lbl">Dir Acc</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-top"><span class="ticker">GOOGL</span><span class="badge up">▲ UP</span></div>
+        <div class="change up">+0.92%</div>
+        <div class="meta">
+          <div class="meta-item">
+            <div class="val">0.58</div>
+            <div class="lbl">Confidence</div>
+          </div>
+          <div class="meta-item">
+            <div class="val">0.61</div>
+            <div class="lbl">Dir Acc</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-top"><span class="ticker">TSLA</span><span class="badge down">▼ DOWN</span></div>
+        <div class="change down">-1.23%</div>
+        <div class="meta">
+          <div class="meta-item">
+            <div class="val">0.62</div>
+            <div class="lbl">Confidence</div>
+          </div>
+          <div class="meta-item">
+            <div class="val">0.55</div>
+            <div class="lbl">Dir Acc</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-top"><span class="ticker">AMZN</span><span class="badge up">▲ UP</span></div>
+        <div class="change up">+0.45%</div>
+        <div class="meta">
+          <div class="meta-item">
+            <div class="val">0.69</div>
+            <div class="lbl">Confidence</div>
+          </div>
+          <div class="meta-item">
+            <div class="val">0.53</div>
+            <div class="lbl">Dir Acc</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="insights">
+      <h3>Model Insights</h3>
+      <div class="insight-row"><span class="name">Most bullish</span><span class="signal up" id="bullish">AAPL
+          (+1.82%)</span><span class="acc">conf 0.71</span></div>
+      <div class="insight-row"><span class="name">Most bearish</span><span class="signal down" id="bearish">TSLA
+          (-1.23%)</span><span class="acc">conf 0.62</span></div>
+      <div class="insight-row"><span class="name">Highest confidence</span><span class="signal up"
+          id="topConf">AAPL</span><span class="acc">0.71</span></div>
+      <div class="insight-row"><span class="name">Overall bias</span><span class="signal" id="bias"
+          style="color:#8686AC">3 UP / 2 DOWN</span><span class="acc">bullish</span></div>
+    </div>
+  </div>
+</body>
+
+</html>

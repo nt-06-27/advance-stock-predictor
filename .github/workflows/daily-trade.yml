@@ -1,0 +1,46 @@
+name: Daily Trade Signal
+
+on:
+  schedule:
+    # 22:00 UTC = 5:00 PM ET (winter) / 6:00 PM ET (summer) — after market close year-round
+    - cron: "0 22 * * 1-5"
+  workflow_dispatch:
+
+env:
+  PYTHONUNBUFFERED: 1
+
+jobs:
+  forecast:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Restore cache
+        uses: actions/cache@v4
+        with:
+          path: cache/
+          key: ${{ runner.os }}-cache-${{ hashFiles('cache/**/*.parquet', 'cache/**/*.pkl', 'cache/**/*.json') }}
+          restore-keys: |
+            ${{ runner.os }}-cache-
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Set up Alpaca credentials
+        run: |
+          echo "APCA_API_KEY_ID=${{ secrets.APCA_API_KEY_ID }}" >> .env
+          echo "APCA_SECRET_KEY=${{ secrets.APCA_SECRET_KEY }}" >> .env
+
+      - name: Run full forecast (all tickers, all models)
+        run: python main.py --trade 2>&1 | tee output.log
+
+      - name: Upload forecast log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: forecast-output
+          path: output.log
