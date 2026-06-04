@@ -1,0 +1,62 @@
+name: Autopilot Daily
+
+on:
+  schedule:
+    - cron: '30 21 * * 1-5'   # 4:30 PM ET weekdays (approximate year-round)
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Run mode'
+        required: true
+        default: daily
+        type: choice
+        options:
+          - daily
+          - approve
+          - stop
+          - status
+          - warmup
+
+jobs:
+  autopilot:
+    runs-on: ubuntu-latest
+    env:
+      APCA_API_KEY_ID: ${{ secrets.APCA_API_KEY_ID }}
+      APCA_SECRET_KEY: ${{ secrets.APCA_SECRET_KEY }}
+      EMAIL_SMTP_SERVER: ${{ secrets.EMAIL_SMTP_SERVER || 'smtp.gmail.com' }}
+      EMAIL_SMTP_PORT: ${{ secrets.EMAIL_SMTP_PORT || '587' }}
+      EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME }}
+      EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+      EMAIL_FROM: ${{ secrets.EMAIL_FROM || secrets.EMAIL_USERNAME }}
+      EMAIL_TO: ${{ secrets.EMAIL_TO }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Restore autopilot state
+        uses: actions/download-artifact@v4
+        with:
+          name: autopilot-state
+          path: cache/
+        continue-on-error: true
+
+      - name: Run autopilot
+        run: |
+          MODE="${{ github.event.inputs.mode || 'daily' }}"
+          python autopilot_run.py "--$MODE"
+
+      - name: Save autopilot state
+        uses: actions/upload-artifact@v4
+        with:
+          name: autopilot-state
+          path: cache/autopilot_state.json
+          retention-days: 90
+          overwrite: true

@@ -4,6 +4,27 @@ from pathlib import Path
 # ── Tickers ──────────────────────────────────────────────────────────────
 TICKERS = ["AAPL", "MSFT", "GOOGL", "TSLA", "AMZN", "VOO", "SPYG"]
 
+# ── Autopilot Universe ───────────────────────────────────────────────────
+# The autopilot can trade any ticker in this universe.  Ranked by
+# signal strength daily; only the best opportunities get capital.
+AUTOPILOT_TICKERS = [
+    # Tech
+    "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "CRM", "AMD", "NFLX", "ADBE",
+    # Finance
+    "JPM", "BAC", "V", "MA", "GS", "BLK",
+    # Healthcare
+    "JNJ", "UNH", "PFE", "ABBV", "MRK", "LLY",
+    # Consumer / Retail
+    "TSLA", "WMT", "HD", "KO", "PEP", "MCD", "NKE",
+    # Energy / Industrial / Defense
+    "XOM", "CVX", "CAT", "BA", "GE",
+    # Broad-market ETFs
+    "SPY", "QQQ", "IWM", "TLT",
+]
+MAX_POSITIONS = 10                 # max open positions at once
+MIN_SIGNAL_STRENGTH = 0.003       # predicted_return * confidence floor (lower = more trades)
+PER_TRADE_FRACTION = 0.10         # fraction of available cash per buy (0.10 = 10%)
+
 # ── Data ─────────────────────────────────────────────────────────────────
 INTERVAL = "1d"
 START_DATE = "2020-01-01"
@@ -78,3 +99,18 @@ CACHE_DIRS = {
     "news": CACHE_ROOT / "news",
     "fundamentals": CACHE_ROOT / "fundamentals",
 }
+
+# ── Autopilot ────────────────────────────────────────────────────────────
+STATE_FILE = CACHE_ROOT / "autopilot_state.json"
+PNL_HISTORY_FILE = CACHE_ROOT / "pnl_history.json"
+AUTOPILOT_LOG_FILE = CACHE_ROOT / "autopilot.log"
+TRADING_DAYS_ONLY = True          # skip weekends and market holidays
+
+# ── Email notifications (optional — leave blank to disable) ──────────────
+# Configure these in .env:
+#   EMAIL_SMTP_SERVER=smtp.gmail.com
+#   EMAIL_SMTP_PORT=587
+#   EMAIL_USERNAME=your@gmail.com
+#   EMAIL_PASSWORD=your-app-password
+#   EMAIL_FROM=your@gmail.com
+#   EMAIL_TO=your@email.com
