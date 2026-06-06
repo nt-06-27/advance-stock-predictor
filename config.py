@@ -106,6 +106,14 @@ PNL_HISTORY_FILE = CACHE_ROOT / "pnl_history.json"
 AUTOPILOT_LOG_FILE = CACHE_ROOT / "autopilot.log"
 TRADING_DAYS_ONLY = True          # skip weekends and market holidays
 
+# ── Dynamic screener ─────────────────────────────────────────────────────
+# Instead of trading a fixed ticker list, the screener scans the broad
+# market daily for momentum, news sentiment, and sector rotation signals.
+SCREENER_TOP_N = 30              # max tickers to run full ML on each day
+SCREENER_MOMENTUM_WEIGHT = 0.4   # weight for price momentum score
+SCREENER_NEWS_WEIGHT = 0.4       # weight for news sentiment score
+SCREENER_SECTOR_WEIGHT = 0.2     # weight for sector rotation score
+
 # ── Email notifications (optional — leave blank to disable) ──────────────
 # Configure these in .env:
 #   EMAIL_SMTP_SERVER=smtp.gmail.com

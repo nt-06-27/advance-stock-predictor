@@ -6,7 +6,6 @@ from typing import Optional
 from dotenv import load_dotenv
 
 from config import (
-    AUTOPILOT_TICKERS,
     END_DATE,
     FEATURE_CONFIG,
     HORIZONS,
@@ -15,6 +14,7 @@ from config import (
     MIN_CONFIDENCE,
     MIN_SIGNAL_STRENGTH,
     PER_TRADE_FRACTION,
+    SCREENER_TOP_N,
     START_DATE,
     TRADE_ALLOCATION,
 )
@@ -325,9 +325,12 @@ def run_daily(state: AutopilotState) -> dict:
     logger.info("[AUTOPILOT] Account: $%.2f cash, $%.2f equity, %d positions",
                 account["cash"], account["equity"], len(held_tickers))
 
-    # 2. Run predictions across universe
+    # 2. Screen market to find best candidates (instead of fixed ticker list)
     all_signals = []
-    universe = list(set(AUTOPILOT_TICKERS) | held_tickers)  # Include held tickers not in universe
+    from screener.screener import screen_market
+
+    universe = screen_market(top_n=SCREENER_TOP_N, held_tickers=held_tickers)
+    logger.info("[AUTOPILOT] Screening returned %d candidates for ML pipeline", len(universe))
 
     for ticker in universe:
         try:
@@ -426,7 +429,9 @@ def run_daily(state: AutopilotState) -> dict:
 
 def warmup(state: AutopilotState, tickers: Optional[list[str]] = None) -> None:
     """Pre-train models for all tickers so daily runs are fast."""
-    tickers = tickers or AUTOPILOT_TICKERS
+    if tickers is None:
+        from screener.universe import BROAD_UNIVERSE
+        tickers = [t for t in BROAD_UNIVERSE if not t.startswith("XL") and t not in ("SPY", "IVV", "VOO", "VTI", "QQQ")]
     logger.info("[WARMUP] Pre-training models for %d tickers...", len(tickers))
 
     for i, ticker in enumerate(tickers):

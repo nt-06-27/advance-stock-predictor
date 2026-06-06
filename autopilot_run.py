@@ -20,7 +20,6 @@ import logging
 import sys
 from datetime import datetime, timezone
 
-from config import AUTOPILOT_TICKERS
 from trading.autopilot import run_daily, warmup
 from trading.state import AutopilotState
 
